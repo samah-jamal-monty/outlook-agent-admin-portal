@@ -1,96 +1,84 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Config, SupportSchedule } from '../lib/supabase';
+import type { SupportSchedule } from '../lib/supabase';
 import { Layout } from '../components/Layout';
 
-const DAY_MAP: Record<string, string> = {
-  '1': 'Mon',
-  '2': 'Tue',
-  '3': 'Wed',
-  '4': 'Thu',
-  '5': 'Fri',
-  '6': 'Sat',
-  '7': 'Sun',
-};
+const DAYS_OF_WEEK = [
+  { value: '1', label: 'Monday' },
+  { value: '2', label: 'Tuesday' },
+  { value: '3', label: 'Wednesday' },
+  { value: '4', label: 'Thursday' },
+  { value: '5', label: 'Friday' },
+  { value: '6', label: 'Saturday' },
+  { value: '7', label: 'Sunday' },
+];
 
 const getDayLabels = (dayString: string): string => {
   const dayNumbers = dayString.split(',').map(d => d.trim());
-  return dayNumbers.map(num => DAY_MAP[num] || num).join(', ');
+  return dayNumbers
+    .map(num => DAYS_OF_WEEK.find(d => d.value === num)?.label || num)
+    .join(', ');
 };
 
-export function Configuration() {
-  const [configs, setConfigs] = useState<Config[]>([]);
+export function Schedule() {
   const [schedules, setSchedules] = useState<SupportSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<Config | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<SupportSchedule | null>(null);
   const [formData, setFormData] = useState({
-    support_email: '',
-    assignee_id: '',
-    assignee_name: '',
-    project_id: '',
-    project_key: '',
-    support_schedule_id: null as number | null,
+    day_of_week: ['1', '2', '3', '4', '5'] as string[],
+    start_time: '09:00',
+    end_time: '17:00',
+    support_name: '',
+    support_jira_id: '',
+    support_jira_project_id: '',
+    support_jira_project_key: '',
   });
 
   useEffect(() => {
-    fetchConfigs();
     fetchSchedules();
   }, []);
 
   const fetchSchedules = async () => {
     try {
-      const { data, error } = await supabase
-        .from('support_schedule')
-        .select('*')
-        .order('day_of_week', { ascending: true });
-
-      if (error) throw error;
-      setSchedules(data || []);
-    } catch (err) {
-      console.error('Failed to fetch schedules:', err);
-    }
-  };
-
-  const fetchConfigs = async () => {
-    try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('config')
+        .from('support_schedule')
         .select('*')
         .order('id', { ascending: true });
 
       if (error) throw error;
-      setConfigs(data || []);
+      setSchedules(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch configurations');
+      setError(err instanceof Error ? err.message : 'Failed to fetch schedules');
     } finally {
       setLoading(false);
     }
   };
 
-  const openModal = (config?: Config) => {
-    if (config) {
-      setEditingConfig(config);
+  const openModal = (schedule?: SupportSchedule) => {
+    if (schedule) {
+      setEditingSchedule(schedule);
       setFormData({
-        support_email: config.support_email,
-        assignee_id: config.assignee_id,
-        assignee_name: config.assignee_name,
-        project_id: config.project_id,
-        project_key: config.project_key,
-        support_schedule_id: config.support_schedule_id || null,
+        day_of_week: schedule.day_of_week.split(',').map(d => d.trim()),
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        support_name: schedule.support_name,
+        support_jira_id: schedule.support_jira_id,
+        support_jira_project_id: schedule.support_jira_project_id,
+        support_jira_project_key: schedule.support_jira_project_key,
       });
     } else {
-      setEditingConfig(null);
+      setEditingSchedule(null);
       setFormData({
-        support_email: '',
-        assignee_id: '',
-        assignee_name: '',
-        project_id: '',
-        project_key: '',
-        support_schedule_id: null,
+        day_of_week: ['1', '2', '3', '4', '5'],
+        start_time: '09:00',
+        end_time: '17:00',
+        support_name: '',
+        support_jira_id: '',
+        support_jira_project_id: '',
+        support_jira_project_key: '',
       });
     }
     setIsModalOpen(true);
@@ -98,14 +86,15 @@ export function Configuration() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setEditingConfig(null);
+    setEditingSchedule(null);
     setFormData({
-      support_email: '',
-      assignee_id: '',
-      assignee_name: '',
-      project_id: '',
-      project_key: '',
-      support_schedule_id: null,
+      day_of_week: ['1', '2', '3', '4', '5'],
+      start_time: '09:00',
+      end_time: '17:00',
+      support_name: '',
+      support_jira_id: '',
+      support_jira_project_id: '',
+      support_jira_project_key: '',
     });
   };
 
@@ -113,44 +102,54 @@ export function Configuration() {
     e.preventDefault();
     setError(null);
 
+    if (formData.day_of_week.length === 0) {
+      setError('Please select at least one day');
+      return;
+    }
+
+    const dataToSave = {
+      ...formData,
+      day_of_week: formData.day_of_week.sort((a, b) => Number(a) - Number(b)).join(','),
+    };
+
     try {
-      if (editingConfig) {
-        // Update existing config
+      if (editingSchedule) {
+        // Update existing schedule
         const { error } = await supabase
-          .from('config')
-          .update(formData)
-          .eq('id', editingConfig.id);
+          .from('support_schedule')
+          .update(dataToSave)
+          .eq('id', editingSchedule.id);
 
         if (error) throw error;
       } else {
-        // Create new config
+        // Create new schedule
         const { error } = await supabase
-          .from('config')
-          .insert([formData]);
+          .from('support_schedule')
+          .insert([dataToSave]);
 
         if (error) throw error;
       }
 
       closeModal();
-      fetchConfigs();
+      fetchSchedules();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save configuration');
+      setError(err instanceof Error ? err.message : 'Failed to save schedule');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this configuration?')) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this schedule?')) return;
 
     try {
       const { error } = await supabase
-        .from('config')
+        .from('support_schedule')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      fetchConfigs();
+      fetchSchedules();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete configuration');
+      setError(err instanceof Error ? err.message : 'Failed to delete schedule');
     }
   };
 
@@ -159,9 +158,9 @@ export function Configuration() {
       <div className="px-4 sm:px-0">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Configuration</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Support Schedule</h1>
             <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-              Manage your project configurations for Outlook integration.
+              Manage support schedules for automatic assignee routing.
             </p>
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
@@ -170,7 +169,7 @@ export function Configuration() {
               onClick={() => openModal()}
               className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 sm:w-auto"
             >
-              Add Configuration
+              Add Schedule
             </button>
           </div>
         </div>
@@ -194,22 +193,22 @@ export function Configuration() {
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
                         <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
-                          Support Email
+                          Day of Week
                         </th>
                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          Assignee ID
+                          Start Time
                         </th>
                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          Assignee Name
+                          End Time
                         </th>
                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          Project ID
+                          Support Name
+                        </th>
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                          Jira ID
                         </th>
                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                           Project Key
-                        </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          Schedule
                         </th>
                         <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                           <span className="sr-only">Actions</span>
@@ -217,51 +216,42 @@ export function Configuration() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                      {configs.length === 0 ? (
+                      {schedules.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                            No configurations found. Click "Add Configuration" to create one.
+                            No schedules found. Click "Add Schedule" to create one.
                           </td>
                         </tr>
                       ) : (
-                        configs.map((config) => (
-                          <tr key={config.id}>
+                        schedules.map((schedule) => (
+                          <tr key={schedule.id}>
                             <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
-                              {config.support_email}
+                              {getDayLabels(schedule.day_of_week)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              {config.assignee_id}
+                              {schedule.start_time}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              {config.assignee_name}
+                              {schedule.end_time}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              {config.project_id}
+                              {schedule.support_name}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              {config.project_key}
+                              {schedule.support_jira_id}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              {config.support_schedule_id ? (
-                                <Link
-                                  to="/schedule"
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                                >
-                                  {schedules.find(s => s.id === config.support_schedule_id)?.support_name || `Schedule #${config.support_schedule_id}`}
-                                </Link>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">None</span>
-                              )}
+                              {schedule.support_jira_project_key}
                             </td>
                             <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                               <button
-                                onClick={() => openModal(config)}
+                                onClick={() => openModal(schedule)}
                                 className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-4"
                               >
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(config.id)}
+                                onClick={() => handleDelete(schedule.id)}
                                 className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               >
                                 Delete
@@ -287,95 +277,113 @@ export function Configuration() {
             <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
               <div>
                 <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-                  {editingConfig ? 'Edit Configuration' : 'Add Configuration'}
+                  {editingSchedule ? 'Edit Schedule' : 'Add Schedule'}
                 </h3>
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="support_email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Support Email
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Days of Week
                       </label>
-                      <input
-                        type="email"
-                        id="support_email"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.support_email}
-                        onChange={(e) => setFormData({ ...formData, support_email: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="assignee_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Assignee ID
-                      </label>
-                      <input
-                        type="text"
-                        id="assignee_id"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.assignee_id}
-                        onChange={(e) => setFormData({ ...formData, assignee_id: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="assignee_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Assignee Name
-                      </label>
-                      <input
-                        type="text"
-                        id="assignee_name"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.assignee_name}
-                        onChange={(e) => setFormData({ ...formData, assignee_name: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Project ID
-                      </label>
-                      <input
-                        type="text"
-                        id="project_id"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.project_id}
-                        onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="project_key" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Project Key
-                      </label>
-                      <input
-                        type="text"
-                        id="project_key"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.project_key}
-                        onChange={(e) => setFormData({ ...formData, project_key: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="support_schedule_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Support Schedule
-                      </label>
-                      <select
-                        id="support_schedule_id"
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
-                        value={formData.support_schedule_id || ''}
-                        onChange={(e) => setFormData({ ...formData, support_schedule_id: e.target.value ? Number(e.target.value) : null })}
-                      >
-                        <option value="">None</option>
-                        {schedules.map((schedule) => (
-                          <option key={schedule.id} value={schedule.id}>
-                            {schedule.support_name} ({getDayLabels(schedule.day_of_week)} {schedule.start_time}-{schedule.end_time})
-                          </option>
+                      <div className="grid grid-cols-4 gap-2">
+                        {DAYS_OF_WEEK.map((day) => (
+                          <label key={day.value} className="inline-flex items-center">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700"
+                              checked={formData.day_of_week.includes(day.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, day_of_week: [...formData.day_of_week, day.value] });
+                                } else {
+                                  setFormData({ ...formData, day_of_week: formData.day_of_week.filter(d => d !== day.value) });
+                                }
+                              }}
+                            />
+                            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{day.label}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        <Link to="/schedule" className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">Manage schedules</Link>
-                      </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="start_time" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Start Time
+                        </label>
+                        <input
+                          type="time"
+                          id="start_time"
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          value={formData.start_time}
+                          onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="end_time" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          End Time
+                        </label>
+                        <input
+                          type="time"
+                          id="end_time"
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          value={formData.end_time}
+                          onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="support_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Support Name
+                      </label>
+                      <input
+                        type="text"
+                        id="support_name"
+                        required
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        value={formData.support_name}
+                        onChange={(e) => setFormData({ ...formData, support_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="support_jira_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Jira ID
+                      </label>
+                      <input
+                        type="text"
+                        id="support_jira_id"
+                        required
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        value={formData.support_jira_id}
+                        onChange={(e) => setFormData({ ...formData, support_jira_id: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="support_jira_project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Jira Project ID
+                      </label>
+                      <input
+                        type="text"
+                        id="support_jira_project_id"
+                        required
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        value={formData.support_jira_project_id}
+                        onChange={(e) => setFormData({ ...formData, support_jira_project_id: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="support_jira_project_key" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Jira Project Key
+                      </label>
+                      <input
+                        type="text"
+                        id="support_jira_project_key"
+                        required
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        value={formData.support_jira_project_key}
+                        onChange={(e) => setFormData({ ...formData, support_jira_project_key: e.target.value })}
+                      />
                     </div>
                   </div>
                   <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
@@ -383,7 +391,7 @@ export function Configuration() {
                       type="submit"
                       className="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 sm:col-start-2 sm:text-sm"
                     >
-                      {editingConfig ? 'Save Changes' : 'Add'}
+                      {editingSchedule ? 'Save Changes' : 'Add'}
                     </button>
                     <button
                       type="button"

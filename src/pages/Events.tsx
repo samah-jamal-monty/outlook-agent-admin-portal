@@ -36,15 +36,15 @@ export function Events() {
   const getStatusBadgeColor = (status: string) => {
     const statusLower = status.toLowerCase();
     if (statusLower.includes('done') || statusLower.includes('closed') || statusLower.includes('resolved')) {
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
     }
     if (statusLower.includes('progress') || statusLower.includes('review')) {
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
     }
     if (statusLower.includes('open') || statusLower.includes('new') || statusLower.includes('todo')) {
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
     }
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   };
 
   return (
@@ -52,8 +52,8 @@ export function Events() {
       <div className="px-4 sm:px-0">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-2xl font-semibold text-gray-900">Events</h1>
-            <p className="mt-2 text-sm text-gray-700">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Events</h1>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
               View all events and their associated Jira tickets.
             </p>
           </div>
@@ -61,7 +61,7 @@ export function Events() {
             <button
               type="button"
               onClick={fetchEvents}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+              className="inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 sm:w-auto"
             >
               <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -72,8 +72,8 @@ export function Events() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-700">{error}</div>
+          <div className="mt-4 rounded-md bg-red-50 dark:bg-red-900/50 p-4">
+            <div className="text-sm text-red-700 dark:text-red-200">{error}</div>
           </div>
         )}
 
@@ -85,36 +85,36 @@ export function Events() {
           <div className="mt-8 flex flex-col">
             <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-300">
-                    <thead className="bg-gray-50">
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
-                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
                           Message ID
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                           Jira Ticket
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                           Status
                         </th>
-                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                           Created At
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                       {events.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-8 text-center text-sm text-gray-500">
+                          <td colSpan={4} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                             No events found.
                           </td>
                         </tr>
                       ) : (
                         events.map((event) => (
                           <tr key={event.id}>
-                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
-                              <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 dark:text-white sm:pl-6">
+                              <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                                 {event.message_id.length > 20 
                                   ? `${event.message_id.substring(0, 20)}...` 
                                   : event.message_id}
@@ -126,12 +126,12 @@ export function Events() {
                                   href={event.jira_ticket_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-900 font-medium"
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
                                 >
                                   {event.jira_ticket}
                                 </a>
                               ) : (
-                                <span className="text-gray-500">{event.jira_ticket}</span>
+                                <span className="text-gray-500 dark:text-gray-400">{event.jira_ticket}</span>
                               )}
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm">
@@ -139,7 +139,7 @@ export function Events() {
                                 {event.jira_status}
                               </span>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
                               {formatDate(event.created_at)}
                             </td>
                           </tr>

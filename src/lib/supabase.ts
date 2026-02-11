@@ -10,6 +10,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Types for database tables
+export interface SupportSchedule {
+  id: number;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  support_name: string;
+  support_jira_id: string;
+  support_jira_project_id: string;
+  support_jira_project_key: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Config {
   id: string;
   support_email: string;
@@ -17,6 +30,8 @@ export interface Config {
   assignee_name: string;
   project_id: string;
   project_key: string;
+  support_schedule_id?: number;
+  support_schedule?: SupportSchedule;
 }
 
 export interface Event {
